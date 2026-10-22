@@ -1,0 +1,9 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Agent Eval Platform</title>
+<style>body{font:16px system-ui;max-width:850px;margin:40px auto;padding:0 18px;color:#19202a}textarea{width:100%;height:130px}button{padding:9px 14px}pre{background:#f4f6f8;padding:14px;overflow:auto}.muted{color:#617080}</style></head>
+<body><h1>AI Agent Evaluation Platform</h1><p class="muted">Create a deterministic demo experiment, enqueue it, then refresh its status.</p>
+<button onclick="seed()">Create demo experiment</button> <button onclick="refreshRun()">Refresh latest run</button><pre id="out">Ready.</pre>
+<script>
+let runId; const out=document.querySelector('#out'); const api=(url,body)=>fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(async r=>{let x=await r.json();if(!r.ok)throw new Error(JSON.stringify(x));return x});
+async function seed(){try{let a=await api('/api/agents',{name:'browser-demo-'+Date.now(),adapter_type:'mock',model:'demo-v1'});let d=await api('/api/datasets',{name:'demo-'+Date.now(),cases:[{name:'math',input:{answer:'4'},expected_answer:'4'},{name:'tool',input:{answer:'done',tool_calls:[{name:'lookup',arguments:{id:7}}]},expected_answer:'done',expected_tool_calls:[{name:'lookup',arguments:{id:7}}]}]});let e=await api('/api/experiments',{name:'demo',agent_config_id:a.id,dataset_version_id:d.versions[0].id});let r=await api('/api/experiments/'+e.id+'/runs',{});runId=r.id;out.textContent='Queued run '+runId+'\nStart the worker (or Docker Compose) to execute it.'}catch(e){out.textContent=e}}</script>
+<script>async function refreshRun(){if(!runId)return;let r=await fetch('/api/runs/'+runId).then(x=>x.json());let results=await fetch('/api/runs/'+runId+'/results').then(x=>x.json());out.textContent=JSON.stringify({run:r,results},null,2)}</script></body></html>
